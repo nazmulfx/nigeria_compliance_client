@@ -146,11 +146,10 @@ after_install = "nigeria_compliance_client.install.after_install"
 # Hook on document methods and events
 
 doc_events = {
-	# "*": {
-	# 	"on_update": "method",
-	# 	"on_cancel": "method",
-	# 	"on_trash": "method"
-	# }
+	"*": {
+		"on_update": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_update",
+		"on_trash": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_trash"
+	},
 	"Sales Invoice": {
 		"before_validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.before_validate",
 		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.before_save",

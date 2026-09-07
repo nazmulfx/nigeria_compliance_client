@@ -4,8 +4,19 @@ from frappe.frappeclient import FrappeClient
 from frappe.model.document import Document
 
 
+def sanitize_url(url: str) -> str:
+	if not url:
+		return ""
+	url = url.strip().rstrip("/")
+	if not (url.startswith("http://") or url.startswith("https://")):
+		url = f"http://{url}"
+	return url
+
+
 class NRSBridgeSettings(Document):
-	pass
+	def validate(self):
+		if self.server_url:
+			self.server_url = sanitize_url(self.server_url)
 
 
 @frappe.whitelist()
@@ -19,16 +30,18 @@ def test_connection():
 	if not settings.server_url or not settings.api_key or not settings.get_password("api_secret"):
 		frappe.throw(_("Server Base URL, API Key, and API Secret are required to test connection."))
 
+	server_url = sanitize_url(settings.server_url)
+
 	try:
 		client = FrappeClient(
-			url=settings.server_url.rstrip("/"),
+			url=server_url,
 			api_key=settings.api_key,
 			api_secret=settings.get_password("api_secret"),
 			verify=bool(settings.verify_ssl)
 		)
 
 		user = client.post_api("frappe.auth.get_logged_user")
-		status_msg = _("Successfully connected to {0} as user: {1}").format(settings.server_url, user)
+		status_msg = _("Successfully connected to {0} as user: {1}").format(server_url, user)
 		settings.db_set("last_connection_status", status_msg)
 
 		return {
@@ -36,7 +49,7 @@ def test_connection():
 			"message": status_msg
 		}
 	except Exception as e:
-		error_msg = _("Failed to connect to {0}: {1}").format(settings.server_url, str(e))
+		error_msg = _("Failed to connect to {0}: {1}").format(server_url, str(e))
 		settings.db_set("last_connection_status", error_msg)
 		frappe.throw(error_msg)
 
@@ -54,21 +67,15 @@ def get_bridge_client():
 	if not settings.server_url or not settings.api_key or not settings.get_password("api_secret"):
 		frappe.throw(_("NRS Bridge Settings are incomplete. Please configure Server URL and API credentials."))
 
+	server_url = sanitize_url(settings.server_url)
+
 	return FrappeClient(
-		url=settings.server_url.rstrip("/"),
+		url=server_url,
 		api_key=settings.api_key,
 		api_secret=settings.get_password("api_secret"),
 		verify=bool(settings.verify_ssl)
 	)
 
 
-# Export generic CRUD API methods for NRS Bridge Connection
-from nigeria_compliance_client.nrs_bridge_connection.api import (
-	create_doc,
-	delete_doc,
-	get_list,
-	post_api,
-	read_doc,
-	update_doc,
-)
+
 
