@@ -193,14 +193,14 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-scheduler_events = {
-	"cron": {
-		## Night 2:00AN
-		"0 2 * * *": [
-			"nigeria_compliance_client.nigeria_compliance_client.hooks.e_invoice.auto_transmit_b2c_invoices"
-		]
-	}
-}
+# scheduler_events = {
+# 	"cron": {
+# 		## Night 2:00AN
+# 		"0 2 * * *": [
+# 			"nigeria_compliance_client.nigeria_compliance_client.hooks.e_invoice.auto_transmit_b2c_invoices"
+# 		]
+# 	}
+# }
 
 # Testing
 # -------
