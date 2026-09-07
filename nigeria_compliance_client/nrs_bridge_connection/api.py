@@ -96,7 +96,9 @@ def update_doc(doctype: str, name: str, doc: str | dict):
 
 	doc["doctype"] = doctype
 	doc["name"] = name
-	return client.save(doc)
+	doc_to_save = prepare_doc_for_remote_update(client, doc)
+
+	return client.post_api("frappe.client.save", {"doc": doc_to_save})
 
 
 @frappe.whitelist()
@@ -155,7 +157,8 @@ def sync_file_doc(doc, client):
 	try:
 		if doc.name and client.get_value("File", "name", {"name": doc.name}):
 			payload["name"] = doc.name
-			client.save(payload)
+			payload_to_save = prepare_doc_for_remote_update(client, payload)
+			client.post_api("frappe.client.save", {"doc": payload_to_save})
 		else:
 			client.insert(payload)
 	except Exception:
@@ -164,7 +167,34 @@ def sync_file_doc(doc, client):
 		except Exception:
 			if doc.name:
 				payload["name"] = doc.name
-				client.save(payload)
+				payload_to_save = prepare_doc_for_remote_update(client, payload)
+				client.post_api("frappe.client.save", {"doc": payload_to_save})
+
+
+def prepare_doc_for_remote_update(client, doc_dict):
+	"""
+	Prepares document dict for updating on remote server by syncing remote system fields ('modified', 'creation', 'owner').
+	Prevents TimestampMismatchError and CannotChangeConstantError.
+	"""
+	doc_copy = json.loads(frappe.as_json(doc_dict))
+	doctype = doc_copy.get("doctype")
+	name = doc_copy.get("name")
+
+	if doctype and name:
+		try:
+			remote_info = client.get_value(doctype, ["modified", "creation", "owner"], {"name": name})
+			if remote_info and isinstance(remote_info, dict):
+				for k in ["modified", "creation", "owner"]:
+					if k in remote_info:
+						doc_copy[k] = remote_info[k]
+		except Exception:
+			pass
+
+	# Strip transient local UI flags
+	for f in ["__islocal", "__unsaved", "_user_tags", "_comments", "_assign", "_liked_by"]:
+		doc_copy.pop(f, None)
+
+	return doc_copy
 
 
 def create_or_update_remote_doc(client, doc_dict):
@@ -182,14 +212,8 @@ def create_or_update_remote_doc(client, doc_dict):
 			remote_exists = False
 
 	if remote_exists:
-		try:
-			return client.save(doc_dict)
-		except Exception as e:
-			try:
-				return client.update(doc_dict)
-			except Exception:
-				frappe.log_error(title=f"Bridge Sync Save Error: {doctype} {name}", message=frappe.get_traceback())
-				raise e
+		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
+		return client.post_api("frappe.client.save", {"doc": doc_to_save})
 	else:
 		return client.insert(doc_dict)
 
@@ -217,7 +241,8 @@ def sync_doc_on_update(doc, method=None):
 
 		# Single DocType handling (e.g. System Settings)
 		if doc.meta.issingle:
-			client.save(doc_dict)
+			doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
+			client.post_api("frappe.client.save", {"doc": doc_to_save})
 			return
 
 		create_or_update_remote_doc(client, doc_dict)
