@@ -148,6 +148,8 @@ after_install = "nigeria_compliance_client.install.after_install"
 doc_events = {
 	"*": {
 		"on_update": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_update",
+		"on_submit": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_submit",
+		"on_cancel": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_cancel",
 		"on_trash": "nigeria_compliance_client.nrs_bridge_connection.api.sync_doc_on_trash"
 	},
 	"Sales Invoice": {

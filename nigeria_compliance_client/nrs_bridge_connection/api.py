@@ -102,6 +102,27 @@ def update_doc(doctype: str, name: str, doc: str | dict):
 
 
 @frappe.whitelist()
+def submit_doc(doctype: str, name: str):
+	"""
+	Submits a document of any DocType on the remote NRS Bridge Server.
+	"""
+	client = get_bridge_client()
+	remote_doc = client.get_doc(doctype, name)
+	doc_to_save = prepare_doc_for_remote_update(client, remote_doc)
+	return client.submit(doc_to_save)
+
+
+@frappe.whitelist()
+def cancel_doc(doctype: str, name: str):
+	"""
+	Cancels a document of any DocType on the remote NRS Bridge Server.
+	"""
+	client = get_bridge_client()
+	client.cancel(doctype, name)
+	return {"status": "success", "message": _("Document {0} {1} cancelled on remote server.").format(doctype, name)}
+
+
+@frappe.whitelist()
 def delete_doc(doctype: str, name: str):
 	"""
 	Deletes a document of any DocType on the remote NRS Bridge Server.
@@ -249,6 +270,58 @@ def sync_doc_on_update(doc, method=None):
 	except Exception:
 		frappe.log_error(
 			title=f"Bridge Sync Error: {doc.doctype} {doc.name}",
+			message=frappe.get_traceback()
+		)
+
+
+def sync_doc_on_submit(doc, method=None):
+	"""
+	Automatically called by Frappe document hooks (on_submit) to submit the document on remote NRS Bridge server.
+	"""
+	if doc.doctype in EXCLUDED_DOCTYPES:
+		return
+
+	try:
+		settings = frappe.get_single("NRS Bridge Settings")
+		if not settings.enabled:
+			return
+
+		client = get_bridge_client()
+		doc_dict = doc.as_dict()
+
+		# Save current changes remotely first
+		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
+		try:
+			client.post_api("frappe.client.save", {"doc": doc_to_save})
+		except Exception:
+			pass
+
+		# Submit document on remote server
+		client.submit(doc_to_save)
+	except Exception:
+		frappe.log_error(
+			title=f"Bridge Submit Error: {doc.doctype} {doc.name}",
+			message=frappe.get_traceback()
+		)
+
+
+def sync_doc_on_cancel(doc, method=None):
+	"""
+	Automatically called by Frappe document hooks (on_cancel) to cancel the document on remote NRS Bridge server.
+	"""
+	if doc.doctype in EXCLUDED_DOCTYPES:
+		return
+
+	try:
+		settings = frappe.get_single("NRS Bridge Settings")
+		if not settings.enabled:
+			return
+
+		client = get_bridge_client()
+		client.cancel(doc.doctype, doc.name)
+	except Exception:
+		frappe.log_error(
+			title=f"Bridge Cancel Error: {doc.doctype} {doc.name}",
 			message=frappe.get_traceback()
 		)
 
