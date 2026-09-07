@@ -96,7 +96,7 @@ def update_doc(doctype: str, name: str, doc: str | dict):
 
 	doc["doctype"] = doctype
 	doc["name"] = name
-	return client.update(doc)
+	return client.save(doc)
 
 
 @frappe.whitelist()
@@ -155,7 +155,7 @@ def sync_file_doc(doc, client):
 	try:
 		if doc.name and client.get_value("File", "name", {"name": doc.name}):
 			payload["name"] = doc.name
-			client.update(payload)
+			client.save(payload)
 		else:
 			client.insert(payload)
 	except Exception:
@@ -164,7 +164,34 @@ def sync_file_doc(doc, client):
 		except Exception:
 			if doc.name:
 				payload["name"] = doc.name
-				client.update(payload)
+				client.save(payload)
+
+
+def create_or_update_remote_doc(client, doc_dict):
+	"""
+	Inserts document on remote server if new, or saves update if already existing.
+	"""
+	doctype = doc_dict.get("doctype")
+	name = doc_dict.get("name")
+
+	remote_exists = False
+	if name:
+		try:
+			remote_exists = bool(client.get_value(doctype, "name", {"name": name}))
+		except Exception:
+			remote_exists = False
+
+	if remote_exists:
+		try:
+			return client.save(doc_dict)
+		except Exception as e:
+			try:
+				return client.update(doc_dict)
+			except Exception:
+				frappe.log_error(title=f"Bridge Sync Save Error: {doctype} {name}", message=frappe.get_traceback())
+				raise e
+	else:
+		return client.insert(doc_dict)
 
 
 def sync_doc_on_update(doc, method=None):
@@ -190,20 +217,10 @@ def sync_doc_on_update(doc, method=None):
 
 		# Single DocType handling (e.g. System Settings)
 		if doc.meta.issingle:
-			client.update(doc_dict)
+			client.save(doc_dict)
 			return
 
-		# Standard DocType handling
-		remote_exists = False
-		try:
-			remote_exists = bool(client.get_value(doc.doctype, "name", {"name": doc.name}))
-		except Exception:
-			remote_exists = False
-
-		if remote_exists:
-			client.update(doc_dict)
-		else:
-			client.insert(doc_dict)
+		create_or_update_remote_doc(client, doc_dict)
 	except Exception:
 		frappe.log_error(
 			title=f"Bridge Sync Error: {doc.doctype} {doc.name}",
