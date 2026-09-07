@@ -1,0 +1,269 @@
+<div>
+    <div style="width:4in;margin:0 auto;text-align:center;">
+        <h1 style="font-weight:bold;text-transform: uppercase;">{{doc.company}}</h1>
+    </div>
+    <h2 style="text-align:center;font-weight:bold;">SALES INVOICE</h2>
+    <div class="row" style="margin-top:0px !important;">
+        <div class="col-xs-6">
+            <table class="table" style="margin:0px !important">
+                <tbody>
+                    <tr>
+                        <td style="font-weight:bold;border:none">Sales Invoice ID:</td>
+                        <td class="" style="text-align:left;border:0px !important;">{{ doc.name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold;border:none">IRN:</td>
+                        <td class="" style="text-align:left;border:0px !important;">{{ doc.custom_irn }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-xs-2"></div>
+        <div class="col-xs-4">
+            <table class="table" style="margin:0px !important">
+                <tbody>
+                    {% if doc.posting_date %}
+                    <tr>
+                        <td style="font-weight:bold;border:none">DATE:</td>
+                        <td class="border-bottom-only" style="text-align:center;border:0px !important;">
+                            {{doc.get_formatted("posting_date")}}</td>
+                    </tr>
+                    {% endif %}
+                    {% if doc.due_date %}
+                    <tr>
+                        <td style="font-weight:bold;border:none">DUE DATE:</td>
+                        <td class="border-bottom-only" style="text-align:center;border:0px !important;">{{
+                            doc.get_formatted("due_date") }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row info-area">
+        <div class="col-xs-6">
+            <div class="border-bottom-only info-heading">CUSTOMER</div>
+            <table class="">
+                <tbody>
+                    {% if doc.customer %}
+                    <tr>
+                        <td>Name</td>
+                        <td>:</td>
+                        <td>{{doc.customer}}</td>
+                    </tr>
+                    {% endif %}
+                    {% if doc.address_display %}
+                    <tr>
+                        <td>Address</td>
+                        <td>:</td>
+                        <td>
+                            {{doc.address_display or ""}}
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+        <div class="col-xs-6">
+            <div class="border-bottom-only info-heading">COMPANY</div>
+            <table class="">
+                <tbody>
+                    {% if doc.company %}
+                    <tr>
+                        <td>Name</td>
+                        <td>:</td>
+                        <td>{{doc.company}}</td>
+                    </tr>
+                    {% endif %}
+                    {% if doc.company_address_display %}
+                    <tr>
+                        <td>Address</td>
+                        <td>:</td>
+                        <td>
+                            {{doc.company_address_display or ""}}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div clas="row">
+        <table class="table table-bordered table-striped item-table">
+            <thead>
+                <tr>
+                    <th style="font-weight:bold;text-align:center;">SL</th>
+                    <th style="font-weight:bold;text-align:center;">Description</th>
+                    <th style="font-weight:bold;text-align:center;">Quantity</th>
+                    <th style="font-weight:bold;text-align:center;">Unit Price</th>
+                    <th style="font-weight:bold;text-align:center;">Total</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(qty=0, amount=0) %}
+                {% for item in doc.items %}
+                <tr>
+                    <td style="width:8%;text-align:center;">{{item.idx}}</td>
+                    <td style="width:52%;">{{item.description}}</td>
+                    <td style="width:10%;text-align:center;">{{item.qty}}</td>
+                    <td style="width:15%;text-align:center;">{{item.rate}}</td>
+                    <td style="width:15%;text-align:center;">{{item.get_formatted("amount", doc)}}</td>
+                </tr>
+                {% set ns.qty = ns.qty + item.qty %}
+                {% set ns.amount = ns.amount + item.amount %}
+                {% endfor %}
+                <tr>
+                    <td colspan="2" style="text-align:center;font-weight:bold">{{"TOTAL"}}</td>
+                    <td style="font-weight:bold;text-align:center;">{{ns.qty}}</td>
+                    <td style="">{{""}}</td>
+                    <td style="font-weight:bold;text-align:center">{{ frappe.format_value(ns.amount, "Currency") }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="row">
+        <div class="col-xs-7">
+            <h2 class="total-qty">TOTAL QTY: {{doc.total_qty}}</h2>
+            <div style="margin-top:10px">
+                {% if doc.terms %}
+                <p style="font-weight:bold">Terms and Conditions</p>
+                <p>{{doc.terms}}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-xs-5" style="text-align:right;">
+            <table class="table table-nobordered" style="margin:0px !important;">
+                <tbody>
+                    <tr>
+                        <td style="font-weight:bold;width:30%;">Total</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{doc.get_formatted("total")}}</td>
+                    </tr>
+                    {% if doc.taxes %}
+                    {% for row in doc.taxes %}
+                    <tr>
+                        <td style="font-weight:bold">{{row.description}}</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{row.get_formatted("tax_amount", doc)}}</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                    {% if doc.discount_amount %}
+                    <tr>
+                        <td style="font-weight:bold">Discount</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{doc.get_formatted("discount_amount")}}</td>
+                    </tr>
+                    {% endif %}
+                    {% if doc.rounding_adjustment %}
+                    <tr>
+                        <td style="font-weight:bold">Rounded Total</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{doc.get_formatted("rounded_total")}}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td style="font-weight:bold">Net Total</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{doc.get_formatted("grand_total")}}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold">In Words</td>
+                        <td>:</td>
+                        <td style="text-align:right">{{doc.in_words}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if doc.custom_qr_code_image %}
+    <div class="row">
+        <div class="col-xs-4">
+            <img src="{{doc.custom_qr_code_image}}" alt="FIRS QR Code">
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+
+<style>
+    /* CSS Customize */
+    .print-format {
+        padding: 0.25in !important;
+    }
+
+    .print-format td,
+    .print-format th {
+        padding: 2px !important;
+    }
+
+    .print-format .table-bordered td,
+    .print-format .table-bordered th {
+        border: 1px solid black !important;
+    }
+
+
+    /* CSS */
+    h2 {
+        margin-bottom: 0px !important;
+    }
+
+    .border-bottom-only {
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: 1px solid #d1d8dd !important;
+    }
+
+    .info-heading {
+        color: #003366;
+        text-transform: uppercase;
+        font-weight: bold;
+        /*font-size:12px;*/
+    }
+
+    .info-area td {
+        font-size: 13px !important;
+    }
+
+    .item-table thead {
+        background-color: #003366;
+        color: white;
+    }
+
+    .item-table th {
+        color: white;
+    }
+
+    .total-qty {
+        font-size: 13px;
+        margin: 0px !important;
+        font-weight: bold;
+    }
+
+    .workflow-info {
+        padding-left: 20px;
+    }
+
+    .text-bold {
+        font-weight: bold;
+    }
+
+    /* Print CSS */
+    @media print {
+        @page {
+            margin: 0.25in !important;
+        }
+
+        .item-table th {
+            color: black;
+        }
+        table.item-table > thead > tr > th {
+            background-color: #003366 !important;
+            color: white !important;
+        }
+    }
+</style>

@@ -1,7 +1,7 @@
 app_name = "nigeria_compliance_client"
 app_title = "Nigeria Compliance Client"
 app_publisher = "Nazmul Hossain"
-app_description = "Nigeria Compliance Client app for Client Site"
+app_description = "Compliance for Nigeria (Nigeria Revenue Service)"
 app_email = "nazmulfx.dev@gmail.com"
 app_license = "mit"
 
@@ -43,7 +43,14 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+	"Sales Invoice": "public/js/sales_invoice.js",
+	"Company": "public/js/company.js",
+    "Purchase Order": "public/js/purchase_order.js",
+	"Customer": "public/js/customer.js",
+	"Supplier": "public/js/supplier.js",
+	"Payment Entry": "public/js/payment_entry.js"
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -83,7 +90,8 @@ app_license = "mit"
 # ------------
 
 # before_install = "nigeria_compliance_client.install.before_install"
-# after_install = "nigeria_compliance_client.install.after_install"
+after_install = "nigeria_compliance_client.install.after_install"
+
 
 # Uninstallation
 # ------------
@@ -113,12 +121,6 @@ app_license = "mit"
 
 # notification_config = "nigeria_compliance_client.notifications.get_notification_config"
 
-# Awesome Bar
-# -----------
-# Extra search results: list of dicts with label, description, route, index.
-# route: ["List", "ToDo"], "/desk/docs/some/page", or "https://example.com"
-# awesomebar_search = ["nigeria_compliance_client.search.awesomebar_results"]
-
 # Permissions
 # -----------
 # Permissions evaluated in scripted ways
@@ -143,52 +145,80 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	# "*": {
+	# 	"on_update": "method",
+	# 	"on_cancel": "method",
+	# 	"on_trash": "method"
+	# }
+	"Sales Invoice": {
+		"before_validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.before_validate",
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.before_save",
+		"on_submit": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.on_submit",
+		"on_change": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.on_change",
+		"on_cancel": "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.on_cancel"
+	},
+	"Payment Entry": {
+		"before_submit": "nigeria_compliance_client.nigeria_compliance_client.hooks.payment_entry.before_submit",
+		"on_cancel": "nigeria_compliance_client.nigeria_compliance_client.hooks.payment_entry.on_cancel"
+	},
+	"Tax Category": {
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.tax_category.before_save"
+	},
+	"Item": {
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.item.before_save"
+	},
+	"Item Tax Template": {
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.item_tax_template.before_save"
+	},
+	"Purchase Order": {
+		"before_validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.purchase_order.before_validate",
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.purchase_order.before_save",
+		"on_submit": "nigeria_compliance_client.nigeria_compliance_client.hooks.purchase_order.on_submit",
+	},
+	"Company": {
+		"before_save": "nigeria_compliance_client.nigeria_compliance_client.hooks.company.before_save"
+	},
+	"Customer": {
+		"validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.customer.validate"
+	},
+	"Supplier": {
+		"validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.supplier.validate"
+	}
+	# "POS Invoice": {
+	# 	"before_validate": "nigeria_compliance_client.nigeria_compliance_client.hooks.pos_invoice.before_validate",
+	# }
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"nigeria_compliance_client.tasks.all"
-# 	],
-# 	"daily": [
-# 		"nigeria_compliance_client.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"nigeria_compliance_client.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"nigeria_compliance_client.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"nigeria_compliance_client.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		## Night 2:00AN
+		"0 2 * * *": [
+			"nigeria_compliance_client.nigeria_compliance_client.hooks.e_invoice.auto_transmit_b2c_invoices"
+		]
+	}
+}
 
 # Testing
 # -------
 
-# before_tests = "nigeria_compliance_client.install.before_tests"
+# before_tests = "nigeria_compliance.install.before_tests"
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "nigeria_compliance_client.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "nigeria_compliance.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "nigeria_compliance_client.task.get_dashboard_data"
+# 	"Task": "nigeria_compliance.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -202,13 +232,13 @@ app_license = "mit"
 
 # Request Events
 # ----------------
-# before_request = ["nigeria_compliance_client.utils.before_request"]
-# after_request = ["nigeria_compliance_client.utils.after_request"]
+# before_request = ["nigeria_compliance.utils.before_request"]
+# after_request = ["nigeria_compliance.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["nigeria_compliance_client.utils.before_job"]
-# after_job = ["nigeria_compliance_client.utils.after_job"]
+# before_job = ["nigeria_compliance.utils.before_job"]
+# after_job = ["nigeria_compliance.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -238,7 +268,7 @@ app_license = "mit"
 # --------------------------------
 
 # auth_hooks = [
-# 	"nigeria_compliance_client.auth.validate"
+# 	"nigeria_compliance.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
@@ -248,8 +278,21 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
-# Translation
-# ------------
-# List of apps whose translatable strings should be excluded from this app's translations.
-# ignore_translatable_strings_from = []
 
+fixtures = [
+	{"doctype": "Role", "filters": [["name", "in", ["e-invoicing Admin", "e-invoicing Manager"]]]},
+	{"doctype": "Property Setter", "filters": [["name", "in", []]]},
+	# {
+	#     "doctype": "Property Setter",
+	#     "filters": [
+	#         ["doc_type", "=", "Sales Invoice"]
+	#     ]
+	# },
+	# {
+	#     "doctype": "Custom Field",
+	#     "filters": [
+	#         ["dt", "=", "Sales Invoice"],
+	#         ["fieldname", "like", "custom_%"]
+	#     ]
+	# }
+]
