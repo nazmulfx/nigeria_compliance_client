@@ -185,8 +185,7 @@ def sync_file_doc(doc, client):
 
 def prepare_doc_for_remote_update(client, doc_dict):
 	"""
-	Prepares document dict for updating on remote server by syncing remote system fields ('modified', 'creation', 'owner').
-	Prevents TimestampMismatchError and CannotChangeConstantError.
+	Prepares document dict for updating remote document by fetching remote modified/creation metadata.
 	"""
 	doc_copy = json.loads(frappe.as_json(doc_dict))
 	doctype = doc_copy.get("doctype")
@@ -194,9 +193,9 @@ def prepare_doc_for_remote_update(client, doc_dict):
 
 	if doctype and name:
 		try:
-			remote_info = client.get_value(doctype, ["modified", "creation", "owner"], {"name": name})
+			remote_info = client.get_value(doctype, ["modified", "creation", "owner", "docstatus"], {"name": name})
 			if remote_info and isinstance(remote_info, dict):
-				for k in ["modified", "creation", "owner"]:
+				for k in ["modified", "creation", "owner", "docstatus"]:
 					if k in remote_info:
 						doc_copy[k] = remote_info[k]
 		except Exception:
@@ -216,14 +215,17 @@ def create_or_update_remote_doc(client, doc_dict):
 	doctype = doc_dict.get("doctype")
 	name = doc_dict.get("name")
 
-	remote_exists = False
+	remote_info = None
 	if name:
 		try:
-			remote_exists = bool(client.get_value(doctype, "name", {"name": name}))
+			remote_info = client.get_value(doctype, ["name", "docstatus"], {"name": name})
 		except Exception:
-			remote_exists = False
+			remote_info = None
 
-	if remote_exists:
+	if remote_info and isinstance(remote_info, dict):
+		# If document is already submitted on remote server (docstatus == 1), do not attempt to re-save draft edits
+		if remote_info.get("docstatus") == 1:
+			return remote_info
 		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
 		return client.post_api("frappe.client.save", {"doc": doc_to_save})
 	else:
@@ -304,12 +306,27 @@ def sync_doc_on_submit(doc, method=None):
 		client = get_bridge_client()
 		doc_dict = doc.as_dict()
 
-		# Save current changes remotely first
-		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
-		client.post_api("frappe.client.save", {"doc": doc_to_save})
+		doctype = doc_dict.get("doctype")
+		name = doc_dict.get("name")
 
-		# Submit document on remote server
-		client.submit(doc_to_save)
+		remote_info = None
+		if name:
+			try:
+				remote_info = client.get_value(doctype, ["name", "docstatus"], {"name": name})
+			except Exception:
+				remote_info = None
+
+		if remote_info and isinstance(remote_info, dict):
+			# If already submitted remotely (docstatus == 1), skip submitting again
+			if remote_info.get("docstatus") == 1:
+				return
+			doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
+			client.submit(doc_to_save)
+		else:
+			# If document does not exist remotely, insert and submit
+			created_doc = client.insert(doc_dict)
+			if created_doc and isinstance(created_doc, dict) and created_doc.get("docstatus") == 0:
+				client.submit(created_doc)
 	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Submit Error: {doc.doctype} {doc.name}",
@@ -337,7 +354,19 @@ def sync_doc_on_cancel(doc, method=None):
 			return
 
 		client = get_bridge_client()
-		client.cancel(doc.doctype, doc.name)
+		remote_info = None
+		if doc.name:
+			try:
+				remote_info = client.get_value(doc.doctype, ["name", "docstatus"], {"name": doc.name})
+			except Exception:
+				remote_info = None
+
+		if remote_info and isinstance(remote_info, dict):
+			if remote_info.get("docstatus") == 2:
+				# Already cancelled on remote server
+				return
+			if remote_info.get("docstatus") == 1:
+				client.cancel(doc.doctype, doc.name)
 	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Cancel Error: {doc.doctype} {doc.name}",

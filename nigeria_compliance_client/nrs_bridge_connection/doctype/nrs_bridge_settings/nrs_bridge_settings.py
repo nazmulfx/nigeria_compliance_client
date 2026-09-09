@@ -26,6 +26,23 @@ DEFAULT_EXCLUDED_DOCTYPES = [
 	"Patch Log",
 	"Singles",
 	"Comment",
+	"Stock Ledger Entry",
+	"GL Entry",
+	"Payment Ledger Entry",
+	"Repost Item Valuation",
+	"Communication",
+	"Email Queue",
+	"Audit Trail",
+	"Access Log",
+	"DocShare",
+	"View Log",
+	"Submission Queue",
+	"Bin",
+	"Item Valuation Rate",
+	"Serial and Batch Bundle",
+	"Stock Reposting Error Log",
+	"Integration Request",
+	"Webhook Request Log",
 ]
 
 
@@ -51,17 +68,20 @@ class NRSBridgeSettings(Document):
 
 	def populate_default_excluded_doctypes(self):
 		existing = {row.document_type for row in self.excluded_doctypes if row.document_type}
+		added = False
 		for dt_name in DEFAULT_EXCLUDED_DOCTYPES:
 			if dt_name not in existing and frappe.db.exists("DocType", dt_name):
 				self.append("excluded_doctypes", {"document_type": dt_name})
+				added = True
+		return added
 
 
 @frappe.whitelist()
 def ensure_default_excluded_doctypes():
 	"""Ensures default excluded doctypes are created in database if not present."""
 	settings = frappe.get_single("NRS Bridge Settings")
-	if not settings.excluded_doctypes:
-		settings.populate_default_excluded_doctypes()
+	added = settings.populate_default_excluded_doctypes()
+	if added:
 		settings.flags.ignore_mandatory = True
 		settings.flags.ignore_permissions = True
 		settings.save(ignore_permissions=True)
