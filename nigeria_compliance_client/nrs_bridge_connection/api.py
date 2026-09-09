@@ -230,6 +230,23 @@ def create_or_update_remote_doc(client, doc_dict):
 		return client.insert(doc_dict)
 
 
+def extract_clean_error_message(e: Exception) -> str:
+	msg = str(e)
+	if hasattr(e, "args") and e.args:
+		first_arg = e.args[0]
+		if isinstance(first_arg, str):
+			msg = first_arg
+		elif isinstance(first_arg, dict):
+			msg = first_arg.get("message") or first_arg.get("exc") or str(first_arg)
+
+	if "ValidationError:" in msg:
+		msg = msg.split("ValidationError:")[-1].strip()
+	elif "FrappeException:" in msg:
+		msg = msg.split("FrappeException:")[-1].strip()
+
+	return msg.strip() or str(e)
+
+
 def sync_doc_on_update(doc, method=None):
 	"""
 	Automatically called by Frappe document hooks (on_update) to sync created/updated documents to remote NRS Bridge server.
@@ -258,10 +275,17 @@ def sync_doc_on_update(doc, method=None):
 			return
 
 		create_or_update_remote_doc(client, doc_dict)
-	except Exception:
+	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Sync Error: {doc.doctype} {doc.name}",
 			message=frappe.get_traceback()
+		)
+		clean_err = extract_clean_error_message(e)
+		frappe.throw(
+			_("Failed to save {0} {1} on NRS Bridge Server:<br><br>{2}").format(
+				doc.doctype, frappe.bold(doc.name), clean_err
+			),
+			title=_("Bridge Sync Error")
 		)
 
 
@@ -282,17 +306,21 @@ def sync_doc_on_submit(doc, method=None):
 
 		# Save current changes remotely first
 		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
-		try:
-			client.post_api("frappe.client.save", {"doc": doc_to_save})
-		except Exception:
-			pass
+		client.post_api("frappe.client.save", {"doc": doc_to_save})
 
 		# Submit document on remote server
 		client.submit(doc_to_save)
-	except Exception:
+	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Submit Error: {doc.doctype} {doc.name}",
 			message=frappe.get_traceback()
+		)
+		clean_err = extract_clean_error_message(e)
+		frappe.throw(
+			_("Failed to submit {0} {1} on NRS Bridge Server:<br><br>{2}").format(
+				doc.doctype, frappe.bold(doc.name), clean_err
+			),
+			title=_("Bridge Submit Error")
 		)
 
 
@@ -310,10 +338,17 @@ def sync_doc_on_cancel(doc, method=None):
 
 		client = get_bridge_client()
 		client.cancel(doc.doctype, doc.name)
-	except Exception:
+	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Cancel Error: {doc.doctype} {doc.name}",
 			message=frappe.get_traceback()
+		)
+		clean_err = extract_clean_error_message(e)
+		frappe.throw(
+			_("Failed to cancel {0} {1} on NRS Bridge Server:<br><br>{2}").format(
+				doc.doctype, frappe.bold(doc.name), clean_err
+			),
+			title=_("Bridge Cancel Error")
 		)
 
 
@@ -331,8 +366,15 @@ def sync_doc_on_trash(doc, method=None):
 
 		client = get_bridge_client()
 		client.delete(doc.doctype, doc.name)
-	except Exception:
+	except Exception as e:
 		frappe.log_error(
 			title=f"Bridge Delete Error: {doc.doctype} {doc.name}",
 			message=frappe.get_traceback()
+		)
+		clean_err = extract_clean_error_message(e)
+		frappe.throw(
+			_("Failed to delete {0} {1} on NRS Bridge Server:<br><br>{2}").format(
+				doc.doctype, frappe.bold(doc.name), clean_err
+			),
+			title=_("Bridge Delete Error")
 		)
