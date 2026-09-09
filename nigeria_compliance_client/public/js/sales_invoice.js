@@ -6,6 +6,52 @@ frappe.ui.form.on("Sales Invoice", {
 			frm.set_value("custom_invoice_type", "381");
 		}
 
+		if (!frm.is_new()) {
+			frm.add_custom_button(__("Sync Invoice Data"), () => {
+				frappe.call({
+					method: "nigeria_compliance_client.nigeria_compliance_client.hooks.sales_invoice.sync_invoice_to_bridge",
+					args: {
+						doctype: frm.doc.doctype,
+						name: frm.doc.name
+					},
+					freeze: true,
+					freeze_message: __("Syncing invoice data to Bridge Site..."),
+					callback: (r) => {
+						if (!r.exc) {
+							frappe.msgprint({
+								title: __("Success"),
+								indicator: "green",
+								message: __("Sales Invoice {0} synced to Bridge Site successfully with all items and compliance data.", [frm.doc.name])
+							});
+							frm.reload_doc();
+						}
+					}
+				});
+			}, __("Bridge Site"));
+
+			frm.add_custom_button(__("Fetch Data from Bridge Site"), () => {
+				frappe.call({
+					method: "nigeria_compliance_client.nrs_bridge_connection.api.pull_remote_doc_updates",
+					args: {
+						doctype: frm.doc.doctype,
+						name: frm.doc.name
+					},
+					freeze: true,
+					freeze_message: __("Fetching generated IRN & QR Code from Bridge Site..."),
+					callback: (r) => {
+						if (!r.exc) {
+							frappe.msgprint({
+								title: __("Success"),
+								indicator: "green",
+								message: __("Fetched latest IRN and compliance data from Bridge Site successfully.")
+							});
+							frm.reload_doc();
+						}
+					}
+				});
+			}, __("Bridge Site"));
+		}
+
 		// secondary button add
 		if (frm.doc.custom_irn) {
 			frm.add_custom_button("Validate IRN", () => {

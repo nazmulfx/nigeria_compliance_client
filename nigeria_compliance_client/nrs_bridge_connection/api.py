@@ -46,6 +46,28 @@ def read_doc(doctype: str, name: str):
 
 
 @frappe.whitelist()
+def get_value(doctype: str, fieldname: str | list, filters: str | dict | None = None):
+	"""
+	Fetches specific field value(s) for a DocType and document/filters from the remote NRS Bridge Server.
+	"""
+	client = get_bridge_client()
+
+	if isinstance(filters, str):
+		try:
+			filters = json.loads(filters)
+		except Exception:
+			pass
+
+	if isinstance(fieldname, str) and (fieldname.startswith("[") or fieldname.startswith("{")):
+		try:
+			fieldname = json.loads(fieldname)
+		except Exception:
+			pass
+
+	return client.get_value(doctype, fieldname=fieldname, filters=filters)
+
+
+@frappe.whitelist()
 def get_list(
 	doctype: str,
 	filters: str | dict | None = None,
@@ -226,10 +248,49 @@ def prepare_doc_for_remote_update(client, doc_dict):
 	return doc_copy
 
 
+def update_local_custom_fields(doctype: str, name: str, remote_doc_dict: dict):
+	"""
+	Updates local database record fields from the server-generated values returned in `remote_doc_dict`.
+	"""
+	if not doctype or not name or not isinstance(remote_doc_dict, dict):
+		return
+
+	try:
+		local_meta = frappe.get_meta(doctype)
+		update_fields = {}
+
+		for k, v in remote_doc_dict.items():
+			if k.startswith("custom_") and local_meta.has_field(k) and v is not None:
+				update_fields[k] = v
+
+		if update_fields:
+			frappe.db.set_value(doctype, name, update_fields, update_modified=False)
+			frappe.db.commit()
+	except Exception:
+		pass
+
+
+@frappe.whitelist()
+def pull_remote_doc_updates(doctype: str, name: str):
+	"""
+	Fetches the document from the remote NRS Bridge Server and updates all local compliance fields
+	(IRN, QR Code, Transmission Status, Schema, etc.) on the Client site database.
+	"""
+	client = get_bridge_client()
+	remote_doc = client.get_doc(doctype, name)
+
+	if not remote_doc or not isinstance(remote_doc, dict):
+		frappe.throw(_("Failed to fetch {0} {1} from NRS Bridge Server.").format(doctype, name))
+
+	update_local_custom_fields(doctype, name, remote_doc)
+	return {"status": "success", "message": _("Updated compliance data from NRS Bridge Server.")}
+
+
 def create_or_update_remote_doc(client, doc_dict):
 	"""
 	Inserts document on remote server if new, or saves update if already existing.
-	Ensures child table items are populated even if document is already submitted.
+	Ensures child table items are populated even if document is already submitted,
+	and syncs server-generated fields (IRN, QR Code, etc.) back to local DB.
 	"""
 	doctype = doc_dict.get("doctype")
 	name = doc_dict.get("name")
@@ -244,6 +305,7 @@ def create_or_update_remote_doc(client, doc_dict):
 		except Exception:
 			remote_info = None
 
+	res = None
 	if remote_info and isinstance(remote_info, dict):
 		# If document is already submitted on remote server (docstatus == 1), check and populate missing items if any
 		if remote_info.get("docstatus") == 1:
@@ -263,12 +325,20 @@ def create_or_update_remote_doc(client, doc_dict):
 							client.insert(item_data)
 				except Exception:
 					pass
-			return remote_info
-
-		doc_to_save = prepare_doc_for_remote_update(client, doc_to_send)
-		return client.post_api("frappe.client.save", {"doc": doc_to_save})
+			try:
+				res = client.get_doc(doctype, name)
+			except Exception:
+				res = remote_info
+		else:
+			doc_to_save = prepare_doc_for_remote_update(client, doc_to_send)
+			res = client.post_api("frappe.client.save", {"doc": doc_to_save})
 	else:
-		return client.insert(doc_to_send)
+		res = client.insert(doc_to_send)
+
+	if res and isinstance(res, dict) and doctype and name:
+		update_local_custom_fields(doctype, name, res)
+
+	return res
 
 
 def extract_clean_error_message(e: Exception) -> str:

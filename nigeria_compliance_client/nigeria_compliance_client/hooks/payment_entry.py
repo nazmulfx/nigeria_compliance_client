@@ -4,6 +4,7 @@ from nigeria_compliance_client.nrs_bridge_connection.api import (
 	create_or_update_remote_doc,
 	get_bridge_client,
 	post_api,
+	pull_remote_doc_updates,
 )
 
 
@@ -37,6 +38,7 @@ def before_submit(doc, method=None):
 						"nigeria_compliance_bridge.nigeria_compliance_bridge.hooks.e_invoice.transmit_invoice",
 						{"doctype": row.reference_doctype, "document_id": inv.name, "type": "selling"},
 					)
+					pull_remote_doc_updates(row.reference_doctype, inv.name)
 
 
 def on_cancel(doc, method=None):
