@@ -28,8 +28,8 @@ def before_submit(doc, method=None):
 						alert=True,
 					)
 					post_api(
-						"nigeria_compliance_bridge.nigeria_compliance_bridge.hooks.e_invoice.send_invoice_to_firs",
-						{"doc": inv.name, "type": "selling"},
+						"nigeria_compliance_bridge.nigeria_compliance_bridge.hooks.e_invoice.transmit_invoice",
+						{"doctype": "Sales Invoice", "document_id": inv.name, "type": "selling"},
 					)
 
 
