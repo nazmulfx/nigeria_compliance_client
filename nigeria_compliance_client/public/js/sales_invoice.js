@@ -1,9 +1,13 @@
 frappe.ui.form.on("Sales Invoice", {
 	refresh(frm) {
 		if (frm.doc.is_return == 1) {
-			frm.set_value("custom_invoice_type", "380");
+			if (frm.doc.custom_invoice_type !== "380") {
+				frm.set_value("custom_invoice_type", "380");
+			}
 		} else {
-			frm.set_value("custom_invoice_type", "381");
+			if (frm.doc.custom_invoice_type !== "381") {
+				frm.set_value("custom_invoice_type", "381");
+			}
 		}
 
 		if (!frm.is_new()) {

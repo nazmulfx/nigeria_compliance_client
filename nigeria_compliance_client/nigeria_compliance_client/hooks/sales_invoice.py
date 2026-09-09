@@ -71,3 +71,56 @@ def calculate_vat(doc):
         item.custom_vat = item.rate * item.custom_total_tax_percent / 100
         item.custom_vat_inclusive_rate = item.rate + item.custom_vat
         item.custom_vat_inclusive_amount = item.custom_vat_inclusive_rate * item.qty
+
+
+@frappe.whitelist()
+def sync_invoice_to_bridge(doctype: str = "Sales Invoice", name: str = None):
+	"""
+	Whitelisted API to explicitly sync/update a Sales Invoice and all its child tables/items
+	to the remote NRS Bridge Server.
+	"""
+	if not name:
+		frappe.throw(_("Document name is required."))
+
+	doc = frappe.get_doc(doctype, name)
+	client = get_bridge_client()
+	doc_dict = doc.as_dict()
+
+	try:
+		res = create_or_update_remote_doc(client, doc_dict)
+		pull_remote_doc_updates(doctype, name)
+		return res
+	except Exception as e:
+		clean_err = extract_clean_error_message(e)
+		frappe.throw(
+			_("Failed to sync {0} {1} to NRS Bridge Server:<br><br>{2}").format(
+				doctype, frappe.bold(name), clean_err
+			),
+			title=_("Bridge Sync Error")
+		)
+
+
+def sync_pending_b2c_statuses_from_bridge():
+	"""
+	Scheduled background task on Client site (runs nightly at 3:00 AM).
+	Queries local Sales Invoices with custom_transmission_status == 'Pending'
+	and pulls updated transmission statuses, IRNs, and QR codes from the NRS Bridge Server.
+	"""
+	pending_invoices = frappe.get_all(
+		"Sales Invoice",
+		filters={
+			"docstatus": 1,
+			"custom_transmission_status": "Pending",
+			"custom_invoice_kind": "B2C",
+		},
+		pluck="name",
+	)
+
+	for invoice_name in pending_invoices:
+		try:
+			pull_remote_doc_updates("Sales Invoice", invoice_name)
+		except Exception as e:
+			frappe.log_error(
+				title=f"B2C Remote Status Sync Error: {invoice_name}",
+				message=frappe.get_traceback()
+			)
