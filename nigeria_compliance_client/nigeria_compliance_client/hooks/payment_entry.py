@@ -1,6 +1,10 @@
 import frappe
 from frappe import _
-from nigeria_compliance_client.nrs_bridge_connection.api import post_api
+from nigeria_compliance_client.nrs_bridge_connection.api import (
+	create_or_update_remote_doc,
+	get_bridge_client,
+	post_api,
+)
 
 
 def before_submit(doc, method=None):
@@ -14,11 +18,11 @@ def before_submit(doc, method=None):
 
 	for row in doc.references:
 		if row.reference_doctype == "Sales Invoice" and row.reference_name:
-			inv = frappe.get_doc("Sales Invoice", row.reference_name)
+			inv = frappe.get_doc(row.reference_doctype, row.reference_name)
 
 			if (
 				inv.custom_transmission_mode != "Do Not Transmit"
-                and inv.custom_invoice_kind in ["B2B", "B2C"]
+				and inv.custom_invoice_kind in ["B2B", "B2C"]
 			):
 				if inv.custom_transmission_status == "Pending":
 					frappe.msgprint(
@@ -27,9 +31,11 @@ def before_submit(doc, method=None):
 						),
 						alert=True,
 					)
+					client = get_bridge_client()
+					create_or_update_remote_doc(client, inv.as_dict())
 					post_api(
 						"nigeria_compliance_bridge.nigeria_compliance_bridge.hooks.e_invoice.transmit_invoice",
-						{"doctype": "Sales Invoice", "document_id": inv.name, "type": "selling"},
+						{"doctype": row.reference_doctype, "document_id": inv.name, "type": "selling"},
 					)
 
 
