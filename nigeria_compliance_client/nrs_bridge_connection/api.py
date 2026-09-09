@@ -208,15 +208,44 @@ def sync_file_doc(doc, client):
 def clean_child_tables(doc_dict: dict):
 	"""
 	Recursively strips local identity fields (`name`, `parent`, `parenttype`, `parentfield`,
-	`modified`, `creation`, `owner`) from all child table arrays in `doc_dict`.
+	`modified`, `creation`, `owner`) and local child reference pointers (`pr_detail`, `po_detail`,
+	`dn_detail`, `so_detail`, `si_detail`, `pi_detail`, etc.) from all child table arrays in `doc_dict`.
 	This ensures remote Frappe treats child table rows as new and performs `db_insert()`
-	instead of attempting a failed `db_update()` on non-existent remote child IDs.
+	without failing reference checks for remote non-existent child row IDs.
 	"""
+	strip_fields = [
+		"name",
+		"parent",
+		"parentfield",
+		"parenttype",
+		"modified",
+		"creation",
+		"owner",
+		"_user_tags",
+		"_comments",
+		"_assign",
+		"_liked_by",
+		# Child detail links pointing to previous document child row IDs
+		"pr_detail",
+		"po_detail",
+		"dn_detail",
+		"so_detail",
+		"si_detail",
+		"pi_detail",
+		"sales_order_item",
+		"purchase_order_item",
+		"delivery_note_item",
+		"purchase_receipt_item",
+		"sales_invoice_item",
+		"purchase_invoice_item",
+		"material_request_item",
+	]
+
 	for key, value in list(doc_dict.items()):
 		if isinstance(value, list):
 			for row in value:
 				if isinstance(row, dict) and "doctype" in row:
-					for field in ["name", "parent", "parentfield", "parenttype", "modified", "creation", "owner", "_user_tags", "_comments", "_assign", "_liked_by"]:
+					for field in strip_fields:
 						row.pop(field, None)
 					row["__islocal"] = 1
 					clean_child_tables(row)
