@@ -2,8 +2,8 @@ import base64
 import json
 import frappe
 from frappe import _
+from nigeria_compliance_client.nrs_bridge_connection.constants import DEFAULT_EXCLUDED_DOCTYPES
 from nigeria_compliance_client.nrs_bridge_connection.doctype.nrs_bridge_settings.nrs_bridge_settings import (
-	DEFAULT_EXCLUDED_DOCTYPES,
 	get_bridge_client,
 )
 

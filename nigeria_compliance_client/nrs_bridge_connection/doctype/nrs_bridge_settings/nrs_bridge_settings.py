@@ -2,48 +2,7 @@ import frappe
 from frappe import _
 from frappe.frappeclient import FrappeClient
 from frappe.model.document import Document
-
-
-DEFAULT_EXCLUDED_DOCTYPES = [
-	"NRS Bridge Settings",
-	"Error Log",
-	"Activity Log",
-	"Route History",
-	"Version",
-	"Sessions",
-	"Scheduled Job Log",
-	"Prepared Report",
-	"DocType",
-	"Custom Field",
-	"Property Setter",
-	"Print Format",
-	"Report",
-	"Workspace",
-	"Role",
-	"User",
-	"Installed Application",
-	"Module Def",
-	"Patch Log",
-	"Singles",
-	"Comment",
-	"Stock Ledger Entry",
-	"GL Entry",
-	"Payment Ledger Entry",
-	"Repost Item Valuation",
-	"Communication",
-	"Email Queue",
-	"Audit Trail",
-	"Access Log",
-	"DocShare",
-	"View Log",
-	"Submission Queue",
-	"Bin",
-	"Item Valuation Rate",
-	"Serial and Batch Bundle",
-	"Stock Reposting Error Log",
-	"Integration Request",
-	"Webhook Request Log",
-]
+from nigeria_compliance_client.nrs_bridge_connection.constants import DEFAULT_EXCLUDED_DOCTYPES
 
 
 def sanitize_url(url: str) -> str:
