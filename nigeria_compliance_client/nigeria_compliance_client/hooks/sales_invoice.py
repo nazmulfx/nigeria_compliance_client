@@ -12,6 +12,12 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
 from . utils import get_previous_outstannding_amount
+from nigeria_compliance_client.nrs_bridge_connection.api import (
+	create_or_update_remote_doc,
+	extract_clean_error_message,
+	get_bridge_client,
+	pull_remote_doc_updates,
+)
 
 
 
