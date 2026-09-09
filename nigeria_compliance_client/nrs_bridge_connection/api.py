@@ -3,32 +3,23 @@ import json
 import frappe
 from frappe import _
 from nigeria_compliance_client.nrs_bridge_connection.doctype.nrs_bridge_settings.nrs_bridge_settings import (
+	DEFAULT_EXCLUDED_DOCTYPES,
 	get_bridge_client,
 )
 
-# System DocTypes that should be excluded from automatic bridge sync
-EXCLUDED_DOCTYPES = {
-	"NRS Bridge Settings",
-	"Error Log",
-	"Activity Log",
-	"Version",
-	"Sessions",
-	"Scheduled Job Log",
-	"Prepared Report",
-	"DocType",
-	"Custom Field",
-	"Property Setter",
-	"Print Format",
-	"Report",
-	"Workspace",
-	"Role",
-	"User",
-	"Installed Application",
-	"Module Def",
-	"Patch Log",
-	"Singles",
-	"Comment",
-}
+
+def get_excluded_doctypes() -> set:
+	"""
+	Returns the set of DocTypes excluded from bridge sync, fetched dynamically from NRS Bridge Settings.
+	"""
+	try:
+		settings = frappe.get_single("NRS Bridge Settings")
+		if settings.excluded_doctypes:
+			return {row.document_type for row in settings.excluded_doctypes if row.document_type}
+	except Exception:
+		pass
+
+	return set(DEFAULT_EXCLUDED_DOCTYPES)
 
 
 @frappe.whitelist()
@@ -243,7 +234,7 @@ def sync_doc_on_update(doc, method=None):
 	"""
 	Automatically called by Frappe document hooks (on_update) to sync created/updated documents to remote NRS Bridge server.
 	"""
-	if doc.doctype in EXCLUDED_DOCTYPES:
+	if doc.doctype in get_excluded_doctypes():
 		return
 
 	try:
@@ -278,7 +269,7 @@ def sync_doc_on_submit(doc, method=None):
 	"""
 	Automatically called by Frappe document hooks (on_submit) to submit the document on remote NRS Bridge server.
 	"""
-	if doc.doctype in EXCLUDED_DOCTYPES:
+	if doc.doctype in get_excluded_doctypes():
 		return
 
 	try:
@@ -309,7 +300,7 @@ def sync_doc_on_cancel(doc, method=None):
 	"""
 	Automatically called by Frappe document hooks (on_cancel) to cancel the document on remote NRS Bridge server.
 	"""
-	if doc.doctype in EXCLUDED_DOCTYPES:
+	if doc.doctype in get_excluded_doctypes():
 		return
 
 	try:
@@ -330,7 +321,7 @@ def sync_doc_on_trash(doc, method=None):
 	"""
 	Automatically called by Frappe document hooks (on_trash) to delete document on remote NRS Bridge server.
 	"""
-	if doc.doctype in EXCLUDED_DOCTYPES:
+	if doc.doctype in get_excluded_doctypes():
 		return
 
 	try:

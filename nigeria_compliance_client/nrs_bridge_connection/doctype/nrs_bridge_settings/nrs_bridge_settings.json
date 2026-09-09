@@ -14,6 +14,8 @@
   "verify_ssl",
   "column_break_timeout",
   "timeout",
+  "section_excluded_doctypes",
+  "excluded_doctypes",
   "section_status",
   "last_connection_status"
  ],
@@ -72,6 +74,17 @@
    "fieldname": "timeout",
    "fieldtype": "Int",
    "label": "Request Timeout (Seconds)"
+  },
+  {
+   "fieldname": "section_excluded_doctypes",
+   "fieldtype": "Section Break",
+   "label": "Excluded DocTypes"
+  },
+  {
+   "fieldname": "excluded_doctypes",
+   "fieldtype": "Table",
+   "label": "Excluded DocTypes",
+   "options": "NRS Bridge Excluded DocType"
   },
   {
    "fieldname": "section_status",

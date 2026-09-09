@@ -91,6 +91,7 @@ doctype_js = {
 
 # before_install = "nigeria_compliance_client.install.before_install"
 after_install = "nigeria_compliance_client.install.after_install"
+after_migrate = "nigeria_compliance_client.nrs_bridge_connection.doctype.nrs_bridge_settings.nrs_bridge_settings.ensure_default_excluded_doctypes"
 
 
 # Uninstallation

@@ -4,6 +4,31 @@ from frappe.frappeclient import FrappeClient
 from frappe.model.document import Document
 
 
+DEFAULT_EXCLUDED_DOCTYPES = [
+	"NRS Bridge Settings",
+	"Error Log",
+	"Activity Log",
+	"Route History",
+	"Version",
+	"Sessions",
+	"Scheduled Job Log",
+	"Prepared Report",
+	"DocType",
+	"Custom Field",
+	"Property Setter",
+	"Print Format",
+	"Report",
+	"Workspace",
+	"Role",
+	"User",
+	"Installed Application",
+	"Module Def",
+	"Patch Log",
+	"Singles",
+	"Comment",
+]
+
+
 def sanitize_url(url: str) -> str:
 	if not url:
 		return ""
@@ -14,9 +39,34 @@ def sanitize_url(url: str) -> str:
 
 
 class NRSBridgeSettings(Document):
+	def onload(self):
+		if not self.excluded_doctypes:
+			self.populate_default_excluded_doctypes()
+
 	def validate(self):
 		if self.server_url:
 			self.server_url = sanitize_url(self.server_url)
+		if not self.excluded_doctypes:
+			self.populate_default_excluded_doctypes()
+
+	def populate_default_excluded_doctypes(self):
+		existing = {row.document_type for row in self.excluded_doctypes if row.document_type}
+		for dt_name in DEFAULT_EXCLUDED_DOCTYPES:
+			if dt_name not in existing and frappe.db.exists("DocType", dt_name):
+				self.append("excluded_doctypes", {"document_type": dt_name})
+
+
+@frappe.whitelist()
+def ensure_default_excluded_doctypes():
+	"""Ensures default excluded doctypes are created in database if not present."""
+	settings = frappe.get_single("NRS Bridge Settings")
+	if not settings.excluded_doctypes:
+		settings.populate_default_excluded_doctypes()
+		settings.flags.ignore_mandatory = True
+		settings.flags.ignore_permissions = True
+		settings.save(ignore_permissions=True)
+		frappe.db.commit()
+	return settings
 
 
 @frappe.whitelist()
