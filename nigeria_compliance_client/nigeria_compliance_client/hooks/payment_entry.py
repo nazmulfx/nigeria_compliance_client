@@ -1,30 +1,36 @@
 import frappe
 from frappe import _
-from .e_invoice import send_invoice_to_firs
+from nigeria_compliance_client.nrs_bridge_connection.api import post_api
+
 
 def before_submit(doc, method=None):
-    """
-    Before submitting a Payment Entry, check if any referenced Sales Invoice 
-    is pending transmission to NRS. If so, automatically transmit the invoice 
-    to NRS first so NRS receives the initial registration in PENDING status.
-    """
-    if not doc.references:
-        return
+	"""
+	Before submitting a Payment Entry, check if any referenced Sales Invoice
+	is pending transmission to NRS. If so, automatically transmit the invoice
+	to NRS first so NRS receives the initial registration in PENDING status.
+	"""
+	if not doc.references:
+		return
 
-    for row in doc.references:
-        if row.reference_doctype == "Sales Invoice" and row.reference_name:
-            inv = frappe.get_doc("Sales Invoice", row.reference_name)
-            
-            if (
-                inv.custom_transmission_mode != "Do Not Transmit" 
+	for row in doc.references:
+		if row.reference_doctype == "Sales Invoice" and row.reference_name:
+			inv = frappe.get_doc("Sales Invoice", row.reference_name)
+
+			if (
+				inv.custom_transmission_mode != "Do Not Transmit"
                 and inv.custom_invoice_kind in ["B2B", "B2C"]
-            ):
-                if inv.custom_transmission_status == "Pending":
-                    frappe.msgprint(
-                        _("Sales Invoice {0} is being transmitted to NRS prior to Payment Entry submission.").format(inv.name),
-                        alert=True
-                    )
-                    send_invoice_to_firs(inv, type="selling")
+			):
+				if inv.custom_transmission_status == "Pending":
+					frappe.msgprint(
+						_("Sales Invoice {0} is being transmitted to NRS prior to Payment Entry submission.").format(
+							inv.name
+						),
+						alert=True,
+					)
+					post_api(
+						"nigeria_compliance_bridge.hooks.e_invoice.send_invoice_to_firs",
+						{"doc": inv.name, "type": "selling"},
+					)
 
 
 def on_cancel(doc, method=None):
