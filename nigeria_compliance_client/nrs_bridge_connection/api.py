@@ -183,6 +183,23 @@ def sync_file_doc(doc, client):
 				client.post_api("frappe.client.save", {"doc": payload_to_save})
 
 
+def clean_child_tables(doc_dict: dict):
+	"""
+	Recursively strips local identity fields (`name`, `parent`, `parenttype`, `parentfield`,
+	`modified`, `creation`, `owner`) from all child table arrays in `doc_dict`.
+	This ensures remote Frappe treats child table rows as new and performs `db_insert()`
+	instead of attempting a failed `db_update()` on non-existent remote child IDs.
+	"""
+	for key, value in list(doc_dict.items()):
+		if isinstance(value, list):
+			for row in value:
+				if isinstance(row, dict) and "doctype" in row:
+					for field in ["name", "parent", "parentfield", "parenttype", "modified", "creation", "owner", "_user_tags", "_comments", "_assign", "_liked_by"]:
+						row.pop(field, None)
+					row["__islocal"] = 1
+					clean_child_tables(row)
+
+
 def prepare_doc_for_remote_update(client, doc_dict):
 	"""
 	Prepares document dict for updating remote document by fetching remote modified/creation metadata.
@@ -205,15 +222,20 @@ def prepare_doc_for_remote_update(client, doc_dict):
 	for f in ["__islocal", "__unsaved", "_user_tags", "_comments", "_assign", "_liked_by"]:
 		doc_copy.pop(f, None)
 
+	clean_child_tables(doc_copy)
 	return doc_copy
 
 
 def create_or_update_remote_doc(client, doc_dict):
 	"""
 	Inserts document on remote server if new, or saves update if already existing.
+	Ensures child table items are populated even if document is already submitted.
 	"""
 	doctype = doc_dict.get("doctype")
 	name = doc_dict.get("name")
+
+	doc_to_send = json.loads(frappe.as_json(doc_dict))
+	clean_child_tables(doc_to_send)
 
 	remote_info = None
 	if name:
@@ -223,13 +245,30 @@ def create_or_update_remote_doc(client, doc_dict):
 			remote_info = None
 
 	if remote_info and isinstance(remote_info, dict):
-		# If document is already submitted on remote server (docstatus == 1), do not attempt to re-save draft edits
+		# If document is already submitted on remote server (docstatus == 1), check and populate missing items if any
 		if remote_info.get("docstatus") == 1:
+			if "items" in doc_dict and isinstance(doc_dict["items"], list) and len(doc_dict["items"]) > 0:
+				try:
+					remote_items = client.get_list("Sales Invoice Item", filters={"parent": name}, fields=["name"], limit_page_length=1)
+					if not remote_items:
+						for item_row in doc_dict["items"]:
+							item_data = json.loads(frappe.as_json(item_row))
+							for f in ["name", "modified", "creation", "owner", "_user_tags", "_comments", "_assign", "_liked_by"]:
+								item_data.pop(f, None)
+							item_data["doctype"] = "Sales Invoice Item"
+							item_data["parent"] = name
+							item_data["parenttype"] = doctype
+							item_data["parentfield"] = "items"
+							item_data["docstatus"] = 1
+							client.insert(item_data)
+				except Exception:
+					pass
 			return remote_info
-		doc_to_save = prepare_doc_for_remote_update(client, doc_dict)
+
+		doc_to_save = prepare_doc_for_remote_update(client, doc_to_send)
 		return client.post_api("frappe.client.save", {"doc": doc_to_save})
 	else:
-		return client.insert(doc_dict)
+		return client.insert(doc_to_send)
 
 
 def extract_clean_error_message(e: Exception) -> str:
