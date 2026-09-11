@@ -8,11 +8,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Invoice Type List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -23,11 +24,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Payment Method List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -38,11 +40,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Tax Category List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -53,11 +56,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Currency List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -68,11 +72,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Product Code List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -83,11 +88,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Services Code List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -98,11 +104,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Country List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -113,11 +120,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS State List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -128,11 +136,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Local Government List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -143,11 +152,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS VAT Exemption List...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
@@ -158,11 +168,12 @@ frappe.ui.form.on("Company", {
             args: {
                 company: frm.doc.name,
             },
-            freeze: true,
-            freeze_message: "Fetching NRS Approved Unit of Measurement (UoM)...",
             callback: function (r) {
-                if (!r.exc) {
-                    frappe.msgprint(r.message);
+                if (!r.exc && r.message) {
+                    frappe.show_alert({
+                        message: r.message.message || r.message,
+                        indicator: "blue"
+                    });
                 }
             },
         });
